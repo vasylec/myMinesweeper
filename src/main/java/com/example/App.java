@@ -35,12 +35,13 @@ public class App extends Application {
     private static int nBombs = 40; // 10 // 40
     private static int rectanglesRevealed = 0;
     private static int[][] map;
+    public static boolean mapGenerated = false;
     private static List<List<Label>> labelList = new ArrayList<>();
     private static List<List<Rectangle>> rectangleList = new ArrayList<>();
     private static String gameState = "ongoing";// failed , won, ongoing
     public static String gameDifficulty = "easy"; // easy, medium. hard
 
-    private void generateMap() {
+    private void generateMap(int x, int y) {
         map = new int[xSize][ySize];
 
         for (int i = 0; i < xSize; i++) {
@@ -52,14 +53,37 @@ public class App extends Application {
         int bombPlaced = 0;
 
         while (bombPlaced != nBombs) {
-            int x = (int) (Math.random() * xSize);
-            int y = (int) (Math.random() * ySize);
+            int genX = (int) (Math.random() * xSize);
+            int genY = (int) (Math.random() * ySize);
 
-            if (map[x][y] == 0) {
-                map[x][y] = 1;
+            if (genX == x && genY == y)
+                continue;
+            if (genX == x - 1 && genY == y - 1)
+                continue;
+            if (genX == x - 1 && genY == y)
+                continue;
+            if (genX == x && genY == y - 1)
+                continue;
+            if (genX == x - 1 && genY == y + 1)
+                continue;
+            if (genX == x + 1 && genY == y - 1)
+                continue;
+            if (genX == x + 1 && genY == y + 1)
+                continue;
+            if (genX == x + 1 && genY == y)
+                continue;
+            if (genX == x && genY == y + 1)
+                continue;
+
+            if (map[genX][genY] == 0) {
+
+                map[genX][genY] = 1;
                 bombPlaced++;
             }
         }
+
+        mapGenerated = true;
+
     }
 
     private void generateLabelMap() {
@@ -164,8 +188,10 @@ public class App extends Application {
         rectangle.setFill(Color.WHITE);
         rectanglesRevealed++;
 
-        System.out.println("Locuri descoperite: " + rectanglesRevealed);
-        System.out.println("Nr locuri care pot fi descoperite: " + ((xSize * ySize) - nBombs));
+        // TODO: sout debug
+        // System.out.println("Locuri descoperite: " + rectanglesRevealed);
+        // System.out.println("Nr locuri care pot fi descoperite: " + ((xSize * ySize) -
+        // nBombs));
 
         if ((xSize * ySize) - nBombs == rectanglesRevealed) {
 
@@ -176,8 +202,7 @@ public class App extends Application {
             alert.setContentText("Ai câștigat !");
             alert.showAndWait();
 
-            generateMap();
-            generateLabelMap();
+            mapGenerated = false;
             refreshMap();
 
             rectanglesRevealed = 0;
@@ -228,41 +253,47 @@ public class App extends Application {
     @Override
     public void start(@SuppressWarnings("exports") Stage stage) throws IOException {
 
-        if (gameDifficulty.equals("easy")) {
-            rectangleSize = 70;
-            xSize = 10;
-            ySize = 8;
-            nBombs = 10;
-        } else if (gameDifficulty.equals("medium")) {
-            rectangleSize = 50;
-            xSize = 16;
-            ySize = 14;
-            nBombs = 40;
-        } else if (gameDifficulty.equals("hard")) {
-            rectangleSize = 30;
-            xSize = 24;
-            ySize = 20;
-            nBombs = 99;
+        switch (gameDifficulty) {
+            case "easy":
+                rectangleSize = 70;
+                xSize = 10;
+                ySize = 8;
+                nBombs = 10;
+                break;
+            case "medium":
+                rectangleSize = 50;
+                xSize = 16;
+                ySize = 14;
+                nBombs = 40;
+                break;
+            case "hard":
+                rectangleSize = 30;
+                xSize = 24;
+                ySize = 20;
+                nBombs = 99;
+                break;
+
+            default:
+                break;
         }
 
         Pane pane = new Pane();
         pane.setPrefSize(xSize * rectangleSize, ySize * rectangleSize);
         pane.setOnMouseClicked(e -> {
-            System.out.println("CLICKED");
+            // TODO: click debug
+            // System.out.println("CLICKED");
 
             if (gameState.equals("failed")) {
-                generateMap();
-                generateLabelMap();
+                // generateMap();
+                mapGenerated = false;
                 refreshMap();
-                printMap();
-                // TODO: de scos printmap
+
                 rectanglesRevealed = 0;
                 gameState = "ongoing";
             }
         });
         scene = new Scene(pane);
-        generateMap();
-        printMap();
+        // generateMap();
 
         for (int i = 0; i < xSize; i++) {
 
@@ -324,10 +355,16 @@ public class App extends Application {
                             rectangle.setFill(Color.DARKGRAY);
                         }
                     } else if (e.getButton().equals(MouseButton.PRIMARY)) {
+                        int x = (int) rectangle.getLayoutX() / rectangleSize;
+                        int y = (int) rectangle.getLayoutY() / rectangleSize;
+                        if (!mapGenerated) {
+                            generateMap(x, y);
+                            generateLabelMap();
+                            refreshMap();
+                            // printMap();
+                        }
 
                         if (!rectangle.getFill().equals(Color.DARKRED) && !rectangle.getFill().equals(Color.RED)) {
-                            int x = (int) rectangle.getLayoutX() / rectangleSize;
-                            int y = (int) rectangle.getLayoutY() / rectangleSize;
 
                             reveal(x, y);
 
@@ -350,22 +387,23 @@ public class App extends Application {
                                     showBombs();
 
                                 } else {
-                                    generateMap();
-                                    generateLabelMap();
+                                    // generateMap(x, y);
+                                    mapGenerated = false;
                                     refreshMap();
+
                                     rectanglesRevealed = 0;
-                                    printMap();
+
                                     gameState = "ongoing";
-                                    // TODO: de scos printmap
+
                                 }
                             } else if (map[x][y] == 1 && gameState == "failed") {
-                                generateMap();
-                                generateLabelMap();
+                                mapGenerated = false;
                                 refreshMap();
+
                                 rectanglesRevealed = 0;
-                                printMap();
+
                                 gameState = "ongoing";
-                                // TODO: de scos printmap
+
                             }
 
                         }
@@ -400,8 +438,6 @@ public class App extends Application {
             }
             labelList.add(labelSublist);
         }
-
-        generateLabelMap();
 
         stage.setScene(scene);
         stage.show();
