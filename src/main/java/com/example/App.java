@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -28,13 +29,16 @@ import java.util.Optional;
 public class App extends Application {
 
     private static Scene scene;
-    private static final int rectangleSize = 70;
-    private static final int xSize = 10;
-    private static final int ySize = 8;
-    private static final int nBombs = 10;
+    private static int rectangleSize = 50; // 70 // 50
+    private static int xSize = 16; // 10 // 16
+    private static int ySize = 14; // 8 // 14
+    private static int nBombs = 40; // 10 // 40
+    private static int rectanglesRevealed = 0;
     private static int[][] map;
     private static List<List<Label>> labelList = new ArrayList<>();
     private static List<List<Rectangle>> rectangleList = new ArrayList<>();
+    private static String gameState = "ongoing";// failed , won, ongoing
+    public static String gameDifficulty = "easy"; // easy, medium. hard
 
     private void generateMap() {
         map = new int[xSize][ySize];
@@ -94,7 +98,7 @@ public class App extends Application {
                 if (k == 4)
                     label.setTextFill(Color.PURPLE);
                 if (k == 5)
-                    label.setTextFill(Color.YELLOW);
+                    label.setTextFill(Color.GOLD);
 
                 label.setText(k + "");
 
@@ -114,20 +118,32 @@ public class App extends Application {
     }
 
     private void printMap() {
-        for (int i = 0; i < xSize; i++) {
-            for (int j = 0; j < ySize; j++) {
-                System.out.print(map[i][j]);
+        for (int i = 0; i < ySize; i++) {
+            for (int j = 0; j < xSize; j++) {
+                System.out.print(map[j][i]);
             }
             System.out.println();
         }
     }
 
-    private void showLabel(int x, int y) {
-        List<Label> list = labelList.get(x);
-        list.get(y).setVisible(true);
+    private void showBombs() {
+        for (int i = 0; i < xSize; i++) {
+            List<Label> list = labelList.get(i);
+            for (int j = 0; j < ySize; j++) {
+                Label label = list.get(j);
+
+                if (map[i][j] == 1) {
+                    label.setVisible(true);
+                    label.setTextFill(Color.BLACK);
+                    label.setText("💥");
+                }
+            }
+        }
     }
 
     private void reveal(int x, int y) {
+        if (gameState.equals("failed"))
+            return;
 
         // verificare limite
         if (x < 0 || x >= xSize || y < 0 || y >= ySize)
@@ -146,6 +162,29 @@ public class App extends Application {
 
         // deschidem pătratul
         rectangle.setFill(Color.WHITE);
+        rectanglesRevealed++;
+
+        System.out.println("Locuri descoperite: " + rectanglesRevealed);
+        System.out.println("Nr locuri care pot fi descoperite: " + ((xSize * ySize) - nBombs));
+
+        if ((xSize * ySize) - nBombs == rectanglesRevealed) {
+
+            Alert alert = new Alert(AlertType.INFORMATION);
+
+            alert.setTitle("Game Over !");
+            alert.setHeaderText(null);
+            alert.setContentText("Ai câștigat !");
+            alert.showAndWait();
+
+            generateMap();
+            generateLabelMap();
+            refreshMap();
+
+            rectanglesRevealed = 0;
+
+            return;
+        }
+
         if (!label.getText().equals("0"))
             label.setVisible(true);
 
@@ -163,6 +202,7 @@ public class App extends Application {
                 reveal(x + dx, y + dy);
             }
         }
+
     }
 
     private void refreshMap() {
@@ -186,9 +226,40 @@ public class App extends Application {
     }
 
     @Override
-    public void start(Stage stage) throws IOException {
+    public void start(@SuppressWarnings("exports") Stage stage) throws IOException {
+
+        if (gameDifficulty.equals("easy")) {
+            rectangleSize = 70;
+            xSize = 10;
+            ySize = 8;
+            nBombs = 10;
+        } else if (gameDifficulty.equals("medium")) {
+            rectangleSize = 50;
+            xSize = 16;
+            ySize = 14;
+            nBombs = 40;
+        } else if (gameDifficulty.equals("hard")) {
+            rectangleSize = 30;
+            xSize = 24;
+            ySize = 20;
+            nBombs = 99;
+        }
+
         Pane pane = new Pane();
         pane.setPrefSize(xSize * rectangleSize, ySize * rectangleSize);
+        pane.setOnMouseClicked(e -> {
+            System.out.println("CLICKED");
+
+            if (gameState.equals("failed")) {
+                generateMap();
+                generateLabelMap();
+                refreshMap();
+                printMap();
+                // TODO: de scos printmap
+                rectanglesRevealed = 0;
+                gameState = "ongoing";
+            }
+        });
         scene = new Scene(pane);
         generateMap();
         printMap();
@@ -245,28 +316,24 @@ public class App extends Application {
                         if (rectangle.getFill().equals(Color.GRAY)) {
                             rectangle.setFill(Color.RED);
                         } else if (rectangle.getFill().equals(Color.RED)) {
-                            rectangle.setFill(Color.GREEN);
+                            rectangle.setFill(Color.GRAY);
                         }
                         if (rectangle.getFill().equals(Color.DARKGRAY)) {
                             rectangle.setFill(Color.DARKRED);
                         } else if (rectangle.getFill().equals(Color.DARKRED)) {
-                            rectangle.setFill(Color.DARKGREEN);
+                            rectangle.setFill(Color.DARKGRAY);
                         }
                     } else if (e.getButton().equals(MouseButton.PRIMARY)) {
 
                         if (!rectangle.getFill().equals(Color.DARKRED) && !rectangle.getFill().equals(Color.RED)) {
-
-                            // showLabel((int) rectangle.getLayoutX() / rectangleSize,
-                            // (int) rectangle.getLayoutY() / rectangleSize);
-
-                            // rectangle.setFill(Color.WHITE);
-
                             int x = (int) rectangle.getLayoutX() / rectangleSize;
                             int y = (int) rectangle.getLayoutY() / rectangleSize;
 
                             reveal(x, y);
 
-                            if (map[x][y] == 1) {
+                            if (map[x][y] == 1 && gameState != "failed") {
+                                e.consume();
+                                gameState = "failed";
                                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                                 alert.setTitle("Game Over");
                                 alert.setHeaderText("💣 Ai pierdut!");
@@ -280,14 +347,25 @@ public class App extends Application {
                                 Optional<ButtonType> result = alert.showAndWait();
 
                                 if (result.isPresent() && result.get() == showBombs) {
+                                    showBombs();
 
                                 } else {
                                     generateMap();
                                     generateLabelMap();
-
                                     refreshMap();
+                                    rectanglesRevealed = 0;
+                                    printMap();
+                                    gameState = "ongoing";
+                                    // TODO: de scos printmap
                                 }
-
+                            } else if (map[x][y] == 1 && gameState == "failed") {
+                                generateMap();
+                                generateLabelMap();
+                                refreshMap();
+                                rectanglesRevealed = 0;
+                                printMap();
+                                gameState = "ongoing";
+                                // TODO: de scos printmap
                             }
 
                         }
@@ -313,7 +391,7 @@ public class App extends Application {
                 label.setPrefSize(rectangleSize, rectangleSize);
                 label.setLayoutX(i * rectangleSize);
                 label.setLayoutY(j * rectangleSize);
-                label.setFont(Font.font(null, FontWeight.BOLD, 50));
+                label.setFont(Font.font(null, FontWeight.BOLD, rectangleSize - rectangleSize / 3));
                 label.setAlignment(Pos.CENTER);
                 label.setTextAlignment(TextAlignment.CENTER);
                 label.setMouseTransparent(true);
