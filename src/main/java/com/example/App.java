@@ -1,8 +1,12 @@
 package com.example;
 
+import javafx.animation.FadeTransition;
+import javafx.animation.FillTransition;
+import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -10,18 +14,25 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Scanner;
 
 /**
  * JavaFX App
@@ -141,6 +152,7 @@ public class App extends Application {
         }
     }
 
+    @SuppressWarnings("unused")
     private void printMap() {
         for (int i = 0; i < ySize; i++) {
             for (int j = 0; j < xSize; j++) {
@@ -185,13 +197,18 @@ public class App extends Application {
             return;
 
         // deschidem pătratul
-        rectangle.setFill(Color.WHITE);
-        rectanglesRevealed++;
 
-        // TODO: sout debug
-        // System.out.println("Locuri descoperite: " + rectanglesRevealed);
-        // System.out.println("Nr locuri care pot fi descoperite: " + ((xSize * ySize) -
-        // nBombs));
+        FillTransition ft = new FillTransition(Duration.seconds(0.5), rectangle);
+        ft.setFromValue((Color) rectangle.getFill());
+        ft.setToValue(Color.WHITE);
+        ft.setOnFinished(e -> {
+            rectangle.setDisable(false);
+        });
+        rectangle.setDisable(true);
+        ft.play();
+        rectangle.setFill(Color.WHITE);
+
+        rectanglesRevealed++;
 
         if ((xSize * ySize) - nBombs == rectanglesRevealed) {
 
@@ -210,8 +227,15 @@ public class App extends Application {
             return;
         }
 
-        if (!label.getText().equals("0"))
+        if (!label.getText().equals("0")) {
             label.setVisible(true);
+            label.setOpacity(0);
+            FadeTransition fadeTransition = new FadeTransition(Duration.seconds(0.5), label);
+            fadeTransition.setFromValue(0);
+            fadeTransition.setToValue(1);
+            fadeTransition.play();
+
+        }
 
         // dacă nu este 0, ne oprim (prima cifră)
         if (!label.getText().equals("0"))
@@ -253,6 +277,34 @@ public class App extends Application {
     @Override
     public void start(@SuppressWarnings("exports") Stage stage) throws IOException {
 
+        // Scanner scanner = new Scanner(System.in);
+        // System.out.println("Alege dificultatea 1,2,3 (1 cea mai usoara):");
+
+        // int diff;
+
+        // try {
+        // diff = scanner.nextInt();
+        // scanner.close();
+        // switch (diff) {
+        // case 1:
+        // gameDifficulty = "easy";
+        // break;
+        // case 2:
+        // gameDifficulty = "medium";
+
+        // break;
+        // case 3:
+        // gameDifficulty = "hard";
+
+        // break;
+
+        // default:
+        // break;
+        // }
+        // } catch (Exception e) {
+
+        // }
+
         switch (gameDifficulty) {
             case "easy":
                 rectangleSize = 70;
@@ -278,13 +330,12 @@ public class App extends Application {
         }
 
         Pane pane = new Pane();
+        GridPane grid = new GridPane();
+
         pane.setPrefSize(xSize * rectangleSize, ySize * rectangleSize);
         pane.setOnMouseClicked(e -> {
-            // TODO: click debug
-            // System.out.println("CLICKED");
 
             if (gameState.equals("failed")) {
-                // generateMap();
                 mapGenerated = false;
                 refreshMap();
 
@@ -292,8 +343,14 @@ public class App extends Application {
                 gameState = "ongoing";
             }
         });
-        scene = new Scene(pane);
-        // generateMap();
+        Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+        BorderPane root = new BorderPane();
+
+        StackPane stackPane = new StackPane();
+        stackPane.getChildren().add(grid);
+
+        // root.setCenter(grid);
+        scene = new Scene(stackPane);
 
         for (int i = 0; i < xSize; i++) {
 
@@ -301,8 +358,8 @@ public class App extends Application {
 
             for (int j = 0; j < ySize; j++) {
                 Rectangle rectangle = new Rectangle(rectangleSize, rectangleSize);
-                rectangle.setLayoutX(i * rectangleSize);
-                rectangle.setLayoutY(j * rectangleSize);
+                // rectangle.setLayoutX(i * rectangleSize);
+                // rectangle.setLayoutY(j * rectangleSize);
 
                 subList.add(rectangle);
 
@@ -344,14 +401,28 @@ public class App extends Application {
                 rectangle.setOnMouseClicked(e -> {
                     if (e.getButton().equals(MouseButton.SECONDARY)) {
 
+                        FillTransition fillTransition = new FillTransition(Duration.seconds(0.5), rectangle);
+
                         if (rectangle.getFill().equals(Color.GRAY)) {
+                            fillTransition.setFromValue(Color.GRAY);
+                            fillTransition.setToValue(Color.RED);
+                            fillTransition.play();
                             rectangle.setFill(Color.RED);
                         } else if (rectangle.getFill().equals(Color.RED)) {
+                            fillTransition.setFromValue(Color.RED);
+                            fillTransition.setToValue(Color.GRAY);
+                            fillTransition.play();
                             rectangle.setFill(Color.GRAY);
                         }
                         if (rectangle.getFill().equals(Color.DARKGRAY)) {
+                            fillTransition.setFromValue(Color.DARKGRAY);
+                            fillTransition.setToValue(Color.DARKRED);
+                            fillTransition.play();
                             rectangle.setFill(Color.DARKRED);
                         } else if (rectangle.getFill().equals(Color.DARKRED)) {
+                            fillTransition.setFromValue(Color.DARKRED);
+                            fillTransition.setToValue(Color.DARKGRAY);
+                            fillTransition.play();
                             rectangle.setFill(Color.DARKGRAY);
                         }
                     } else if (e.getButton().equals(MouseButton.PRIMARY)) {
@@ -411,7 +482,10 @@ public class App extends Application {
 
                 });
 
-                pane.getChildren().add(rectangle);
+                grid.add(rectangle, i, j);
+
+                // TODO: ORI GRID ORI PANE
+                // pane.getChildren().add(rectangle);
 
             }
 
@@ -427,14 +501,17 @@ public class App extends Application {
                 Label label = new Label("1");
                 label.setVisible(false);
                 label.setPrefSize(rectangleSize, rectangleSize);
-                label.setLayoutX(i * rectangleSize);
-                label.setLayoutY(j * rectangleSize);
+                // label.setLayoutX(i * rectangleSize);
+                // label.setLayoutY(j * rectangleSize);
                 label.setFont(Font.font(null, FontWeight.BOLD, rectangleSize - rectangleSize / 3));
                 label.setAlignment(Pos.CENTER);
                 label.setTextAlignment(TextAlignment.CENTER);
                 label.setMouseTransparent(true);
                 labelSublist.add(label);
-                pane.getChildren().add(label);
+
+                grid.add(label, i, j);
+
+                // pane.getChildren().add(label);
             }
             labelList.add(labelSublist);
         }
